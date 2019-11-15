@@ -20,13 +20,7 @@ void nano_wait(unsigned int n) {
             "        bgt repeat\n" : : "r"(n) : "r0", "cc");
 }
 
-int main(void)
-{
-
-	nano_wait(1000);
-
-	init_spi();
-
+void check_byte_operation(void) {
 	set_mode();
 
 	write_byte(0x69, 0x00);
@@ -40,6 +34,34 @@ int main(void)
 	check1 = read_byte(0x00);
 	check2 = read_byte(0x01);
 	check3 = read_byte(0x69);
+}
+
+void check_array_operation(void) {
+	uint8_t array[] = {255, 1, 2, 3, 4, 5};
+	uint8_t check_array[6];
+	int i;
+
+	write_array(array, 6, 0x01);
+
+	nano_wait(100000);
+
+	read_array(check_array, 6, 0x01);
+
+	for (i = 0; i < 6; i++) {
+		if (array[i] != check_array[i]) {
+			// Set a breakpoint here to check if the arrays are the same
+			nano_wait(100);
+		}
+	}
+}
+
+int main(void) {
+
+	init_spi();
+
+	nano_wait(10000);
+
+	check_array_operation();
 
 	for(;;);
 }
