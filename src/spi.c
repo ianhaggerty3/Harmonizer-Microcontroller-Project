@@ -36,19 +36,11 @@ void init_spi() {
 	GPIOB->MODER |= (2 << (2 * 14));
 	GPIOB->MODER |= (2 << (2 * 15));
 
-	// Configure for bidirectional mode and set as master
-	//SPI2->CR1 |= (SPI_CR1_BIDIMODE | SPI_CR1_BIDIOE | SPI_CR1_MSTR);
-
+	// Set as master
 	SPI2->CR1 |= SPI_CR1_MSTR;
 
-	// Set clock divisor for baud rate as 4, the highest this  device can handle
+	// Set clock divisor for baud rate as 4, the highest the 23LC1024 can handle
 	SPI2->CR1 |= SPI_CR1_BR_0;
-
-	// Lower Baud rate for testing
-//	SPI2->CR1 |= (SPI_CR1_BR_0 | SPI_CR1_BR_2);
-
-	// Set 8-bit word size
-	//SPI2->CR2 |= (SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2);
 
 	SPI2->CR2 |= SPI_CR2_FRXTH;
 
@@ -59,13 +51,7 @@ void init_spi() {
 	SPI2->CR1 |= SPI_CR1_SSM;
 	SPI2->CR1 |= SPI_CR1_SSI;
 
-
 	GPIOB->BSRR = 1 << 11;
-
-	// SPI2->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
-
-	// NSS pulse management and slave select output
-	// SPI2->CR2 |= (SPI_CR2_NSSP | 0);
 
 	// Enable SPI communication
 	SPI2->CR1 |= SPI_CR1_SPE;
