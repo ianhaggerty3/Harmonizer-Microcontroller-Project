@@ -20,23 +20,9 @@ void nano_wait(unsigned int n) {
             "        bgt repeat\n" : : "r"(n) : "r0", "cc");
 }
 
-void check_byte_operation(void) {
-	set_mode();
+#ifdef UNIT_TEST
 
-	write_byte(0x69, 0x00);
-	write_byte(0x70, 0x01);
-	write_byte(0x70, 0x69);
-
-	uint8_t check1;
-	uint8_t check2;
-	uint8_t check3;
-
-	check1 = read_byte(0x00);
-	check2 = read_byte(0x01);
-	check3 = read_byte(0x69);
-}
-
-void check_array_operation(void) {
+void test_array_operation(void) {
 	uint8_t array[] = {255, 1, 2, 3, 4, 5};
 	uint8_t check_array[6];
 	int i;
@@ -53,15 +39,45 @@ void check_array_operation(void) {
 			nano_wait(100);
 		}
 	}
+	nano_wait(100);
 }
+
+void test_address_lookup(void) {
+	int i;
+	uint8_t input_address[3];
+	uint8_t expected_address[3] = {0x01, 0x02, 0x00};
+
+	address_lookup(input_address, 0x200, 2);
+	for (i = 0; i < 3; i++) {
+		if (input_address[i] != expected_address[i]) {
+			nano_wait(100);
+		}
+	}
+	nano_wait(100);
+}
+
+void test_buf_count(void) {
+	if (BUF_COUNT != 0x100) {
+		nano_wait(100);
+	}
+	nano_wait(100);
+}
+
+#endif
 
 int main(void) {
 
+	// Note: we have 8 kB of memory on the chip
+
 	init_spi();
 
-	nano_wait(10000);
+#ifdef UNIT_TEST
+	test_array_operation();
+	test_address_lookup();
+	test_buf_count();
+#endif
 
-	check_array_operation();
+//	DMA1
 
 	for(;;);
 }
