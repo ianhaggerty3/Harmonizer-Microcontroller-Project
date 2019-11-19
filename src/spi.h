@@ -6,13 +6,17 @@
 
 uint8_t recordings_buf1[NUM_CHANNELS][BUF_SIZE];
 uint8_t recordings_buf2[NUM_CHANNELS][BUF_SIZE];
-uint8_t recordings_state[NUM_CHANNELS];
-uint8_t zero_array[BUF_SIZE];
-uint8_t recording_base_addrs[16];
-uint16_t recording_offsets[16];
+uint8_t recording_ids[NUM_CHANNELS];
+uint8_t recording_location_and_base_addrs[NUM_CHANNELS];
+uint16_t recording_offsets[NUM_CHANNELS];
+uint8_t num_recordings;
+
 uint16_t recording_endings[16];
 
+uint8_t device_lookup(uint8_t base);
 void address_lookup(uint8_t * address_array, uint16_t offset, uint8_t base);
+
+void init_dma(void);
 
 void init_spi(void);
 void write_array(uint8_t * array, uint16_t len, uint8_t address);

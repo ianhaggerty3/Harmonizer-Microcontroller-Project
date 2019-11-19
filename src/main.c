@@ -73,6 +73,8 @@ int main(void) {
 
 #ifdef UNIT_TEST
 	test_array_operation();
+	test_array_operation();
+	test_array_operation();
 	test_address_lookup();
 	test_buf_count();
 #endif

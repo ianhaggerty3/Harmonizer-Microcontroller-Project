@@ -9,6 +9,12 @@
 
 #include "spi.h"
 
+uint8_t device_lookup(uint8_t base) {
+	// Yet to be implemented; may want to return a pointer to GPIOA or something
+
+	return 0x00;
+}
+
 void address_lookup(uint8_t * address_array, uint16_t offset, uint8_t base) {
 	uint32_t address;
 	if (base > (MEM_SEGMENTS - 1)) {
@@ -22,7 +28,55 @@ void address_lookup(uint8_t * address_array, uint16_t offset, uint8_t base) {
 	address_array[2] = (address & 0x0000ff) >> (0 * 8);
 }
 
-void init_spi() {
+void init_dma(void) {
+	RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+
+
+	// Channel 1 is for the ADC based on the FRM
+
+	// Channel 2 is for SPI1 Rx
+	DMA1_Channel2->CPAR = &SPI1->DR;
+	DMA1_Channel2->CCR &= ~DMA_CCR_DIR;
+	DMA1_Channel2->CCR |= DMA_CCR_MINC;
+	// Set memory address and count later on
+
+	DMA1_Channel2->CCR &= ~DMA_CCR_MSIZE;
+	DMA1_Channel2->CCR &= ~DMA_CCR_PSIZE;
+
+	DMA1_Channel2->CCR |= DMA_CCR_EN;
+
+	// Channel 3 is for SPI1 Tx
+	DMA1_Channel3->CPAR = &SPI1->DR;
+	DMA1_Channel3->CCR |= DMA_CCR_DIR;
+	DMA1_Channel3->CCR |= DMA_CCR_MINC;
+
+	DMA1_Channel3->CCR &= ~DMA_CCR_MSIZE;
+	DMA1_Channel3->CCR &= ~DMA_CCR_PSIZE;
+
+	DMA1_Channel3->CCR |= DMA_CCR_EN;
+
+	// Channel 4 is for SPI2 Rx
+	DMA1_Channel4->CPAR = &SPI2->DR;
+	DMA1_Channel4->CCR &= ~DMA_CCR_DIR;
+	DMA1_Channel4->CCR |= DMA_CCR_MINC;
+
+	DMA1_Channel4->CCR &= ~DMA_CCR_MSIZE;
+	DMA1_Channel4->CCR &= ~DMA_CCR_PSIZE;
+
+	DMA1_Channel4->CCR |= DMA_CCR_EN;
+
+	// Channel 5 is for SPI2 Tx
+	DMA1_Channel5->CPAR = &SPI2->DR;
+	DMA1_Channel5->CCR |= DMA_CCR_DIR;
+	DMA1_Channel5->CCR |= DMA_CCR_MINC;
+
+	DMA1_Channel5->CCR &= ~DMA_CCR_MSIZE;
+	DMA1_Channel5->CCR &= ~DMA_CCR_PSIZE;
+
+	DMA1_Channel5->CCR |= DMA_CCR_EN;
+}
+
+void init_spi(void) {
 	RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 	RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
@@ -103,16 +157,14 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address) {
 
 	while (SPI2->SR & SPI_SR_FRLVL) current_element = SPI2->DR;
 
-	for (i = 0; i < len; i++) {
-		while (!(SPI2->SR & SPI_SR_TXE));
-		SPI2->DR = 0x00;
 
+	SPI2->CR1 |= SPI_CR1_RXONLY;
+	for (i = 0; i < len; i++) {
 		while (!(SPI2->SR & SPI_SR_RXNE));
 		current_element = SPI2->DR;
 		array[i] = current_element;
 	}
-
-	while (SPI2->SR & SPI_SR_BSY);
+	SPI2->CR1 &= ~SPI_CR1_RXONLY;
 
 	GPIOB->BSRR |= 1 << 11;
 }
