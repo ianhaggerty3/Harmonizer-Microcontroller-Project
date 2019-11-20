@@ -48,7 +48,7 @@ void test_dma_array_operation(void) {
 	recording_ids[0] = 0;
 	recording_ids[1] = 4;
 	recording_ids[2] = 3;
-	for (i = 0; i < BUF_SIZE; i++) {
+	for (i = 0; i < BUF_LEN; i++) {
 		recordings_buf1[0][i] = i;
 		recordings_buf1[4][i] = i;
 		recordings_buf1[3][i] = i;
@@ -67,10 +67,24 @@ void test_dma_array_operation(void) {
 	while (num_recordings == 1);
 	write_array_dma(recordings_buf1[3], 0x02, 0, DMA1_Channel5, SPI2);
 	while (num_recordings == 2);
+
+	read_array(&recordings_buf2[1], BUF_LEN, 0x00);
+
+	for (i = 0; i < BUF_LEN; i++) {
+		if (recordings_buf2[1][i] != i) {
+			nano_wait(1);
+		}
+	}
+
+	write_array(recordings_buf1[0], BUF_LEN, 0x00);
+	write_array(recordings_buf1[0], BUF_LEN, 0x01);
+	write_array(recordings_buf1[0], BUF_LEN, 0x02);
+
+
 	read_array_dma(recordings_buf2[0], 0x00, 0, DMA1_Channel4, SPI2);
 	while (num_read != 3);
 
-	for (i = 0; i < BUF_SIZE; i++) {
+	for (i = 0; i < BUF_LEN; i++) {
 		if (recordings_buf2[0][i] != i
 		 || recordings_buf2[4][i] != i
 		 || recordings_buf2[3][i] != i) {
