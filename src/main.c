@@ -42,6 +42,44 @@ void test_array_operation(void) {
 	nano_wait(100);
 }
 
+void test_dma_array_operation(void) {
+	int i;
+
+	recording_ids[0] = 0;
+	recording_ids[1] = 4;
+	recording_ids[2] = 3;
+	for (i = 0; i < BUF_SIZE; i++) {
+		recordings_buf1[0][i] = i;
+		recordings_buf1[4][i] = i;
+		recordings_buf1[3][i] = i;
+	}
+	recording_location_and_base_addrs[0] = 0x00;
+	recording_location_and_base_addrs[4] = 0x01;
+	recording_location_and_base_addrs[3] = 0x02;
+	for (i = 0; i < NUM_CHANNELS; i++) {
+		recording_offsets[i] = 0;
+	}
+
+	num_recordings = 0;
+	write_array_dma(recordings_buf1[0], 0x00, 0, DMA1_Channel5, SPI2);
+	while (num_recordings == 0);
+	write_array_dma(recordings_buf1[4], 0x01, 0, DMA1_Channel5, SPI2);
+	while (num_recordings == 1);
+	write_array_dma(recordings_buf1[3], 0x02, 0, DMA1_Channel5, SPI2);
+	while (num_recordings == 2);
+	read_array_dma(recordings_buf2[0], 0x00, 0, DMA1_Channel4, SPI2);
+	while (num_read != 3);
+
+	for (i = 0; i < BUF_SIZE; i++) {
+		if (recordings_buf2[0][i] != i
+		 || recordings_buf2[4][i] != i
+		 || recordings_buf2[3][i] != i) {
+			nano_wait(1);
+		}
+	}
+	nano_wait(1);
+}
+
 void test_address_lookup(void) {
 	int i;
 	uint8_t input_address[3];
@@ -70,11 +108,11 @@ int main(void) {
 	// Note: we have 8 kB of memory on the chip
 
 	init_spi();
+	init_dma();
 
 #ifdef UNIT_TEST
 	test_array_operation();
-	test_array_operation();
-	test_array_operation();
+	test_dma_array_operation();
 	test_address_lookup();
 	test_buf_count();
 #endif

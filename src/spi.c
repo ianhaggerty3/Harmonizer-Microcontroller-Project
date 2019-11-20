@@ -15,7 +15,7 @@ uint8_t device_lookup(uint8_t base) {
 	return 0x00;
 }
 
-void address_lookup(uint8_t * address_array, uint16_t offset, uint8_t base) {
+void address_lookup(uint8_t * address_array, uint8_t base, uint16_t offset) {
 	uint32_t address;
 	if (base > (MEM_SEGMENTS - 1)) {
 		return;
@@ -43,7 +43,7 @@ void init_dma(void) {
 	DMA1_Channel2->CCR &= ~DMA_CCR_MSIZE;
 	DMA1_Channel2->CCR &= ~DMA_CCR_PSIZE;
 
-	DMA1_Channel2->CCR |= DMA_CCR_EN;
+	DMA1_Channel2->CCR |= DMA_CCR_TCIE;
 
 	// Channel 3 is for SPI1 Tx
 	DMA1_Channel3->CPAR = &SPI1->DR;
@@ -53,7 +53,7 @@ void init_dma(void) {
 	DMA1_Channel3->CCR &= ~DMA_CCR_MSIZE;
 	DMA1_Channel3->CCR &= ~DMA_CCR_PSIZE;
 
-	DMA1_Channel3->CCR |= DMA_CCR_EN;
+	DMA1_Channel3->CCR |= DMA_CCR_TCIE;
 
 	// Channel 4 is for SPI2 Rx
 	DMA1_Channel4->CPAR = &SPI2->DR;
@@ -63,7 +63,7 @@ void init_dma(void) {
 	DMA1_Channel4->CCR &= ~DMA_CCR_MSIZE;
 	DMA1_Channel4->CCR &= ~DMA_CCR_PSIZE;
 
-	DMA1_Channel4->CCR |= DMA_CCR_EN;
+	DMA1_Channel4->CCR |= DMA_CCR_TCIE;
 
 	// Channel 5 is for SPI2 Tx
 	DMA1_Channel5->CPAR = &SPI2->DR;
@@ -73,7 +73,10 @@ void init_dma(void) {
 	DMA1_Channel5->CCR &= ~DMA_CCR_MSIZE;
 	DMA1_Channel5->CCR &= ~DMA_CCR_PSIZE;
 
-	DMA1_Channel5->CCR |= DMA_CCR_EN;
+	DMA1_Channel5->CCR |= DMA_CCR_TCIE;
+
+	NVIC->ISER[0] |= 1 << DMA1_Channel2_3_IRQn;
+	NVIC->ISER[0] |= 1 << DMA1_Channel4_5_IRQn;
 }
 
 void init_spi(void) {
@@ -157,7 +160,6 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address) {
 
 	while (SPI2->SR & SPI_SR_FRLVL) current_element = SPI2->DR;
 
-
 	SPI2->CR1 |= SPI_CR1_RXONLY;
 	for (i = 0; i < len; i++) {
 		while (!(SPI2->SR & SPI_SR_RXNE));
@@ -168,3 +170,134 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address) {
 
 	GPIOB->BSRR |= 1 << 11;
 }
+
+void write_array_dma(uint8_t * array, uint8_t base, uint16_t offset, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
+	uint8_t address[3];
+
+	GPIOB->BRR |= 1 << 11;
+
+	address_lookup(address, base, offset);
+
+	while (spi->SR & SPI_SR_FTLVL);
+	*(uint8_t *)&spi->DR = 0x02;
+	*(uint8_t *)&spi->DR = address[0];
+	*(uint8_t *)&spi->DR = address[1];
+	*(uint8_t *)&spi->DR = address[2];
+
+	dma_channel->CMAR = array;
+	dma_channel->CNDTR = BUF_SIZE;
+	dma_channel->CCR |= DMA_CCR_EN;
+	spi->CR2 |= SPI_CR2_TXDMAEN;
+}
+
+void read_array_dma(uint8_t * array, uint8_t base, uint16_t offset, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
+	uint16_t i;
+	uint8_t current_element;
+	uint8_t address[3];
+
+	GPIOB->BRR |= 1 << 11;
+
+	address_lookup(address, base, offset);
+
+	while (spi->SR & SPI_SR_FTLVL);
+	*(uint8_t *)&spi->DR = 0x03;
+	*(uint8_t *)&spi->DR = address[0];
+	*(uint8_t *)&spi->DR = address[1];
+	*(uint8_t *)&spi->DR = address[2];
+
+	while (spi->SR & SPI_SR_BSY);
+	while (spi->SR & SPI_SR_FRLVL) current_element = spi->DR;
+
+	dma_channel->CMAR = array;
+	dma_channel->CNDTR = BUF_SIZE;
+	dma_channel->CCR |= DMA_CCR_EN;
+	spi->CR2 |= SPI_CR2_RXDMAEN;
+	spi->CR1 |= SPI_CR1_RXONLY;
+}
+
+// This is where I will manage the work queues
+
+void DMA1_Channel2_3_IRQHandler(void) {
+	// Determine why this interrupt was called
+	if (DMA1_Channel2->CCR & DMA_CCR_EN) {
+		// Reception
+		num_read++;
+
+		SPI1->CR1 &= ~SPI_CR1_RXONLY;
+		GPIOB->BSRR |= 1 << 11;
+
+		DMA1->IFCR |= DMA_IFCR_CTCIF2;
+		DMA1_Channel2->CCR &= ~DMA_CCR_EN;
+
+		if (num_read >= num_recordings) {
+			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
+			return;
+		}
+
+		// need a current_buf variable
+		read_array_dma(recordings_buf1[num_read], recording_location_and_base_addrs[num_read], recording_offsets[num_read], DMA1_Channel2, SPI1);
+
+
+	} else if (DMA1_Channel3->CCR & DMA_CCR_EN) {
+		// Transmission
+		DMA1->IFCR |= DMA_IFCR_CTCIF3;
+		// Indicates we are done transmitting; do not need to do anything else, that will be handled by our keyboard functionality
+		DMA1_Channel3->CCR &= ~DMA_CCR_EN;
+
+		// assume it is a new recording; eventually we will have to check
+		num_read++;
+	}
+}
+
+void DMA1_Channel4_5_IRQHandler(void) {
+	uint8_t current_element;
+
+	if (DMA1_Channel4->CCR & DMA_CCR_EN) {
+		// Reception
+		num_read++;
+
+		SPI2->CR1 &= ~SPI_CR1_RXONLY;
+		GPIOB->BSRR |= 1 << 11;
+		while (SPI2->SR & SPI_SR_FRLVL) current_element = SPI2->DR;
+
+		DMA1->IFCR |= DMA_IFCR_CTCIF4;
+		DMA1_Channel4->CCR &= ~DMA_CCR_EN;
+
+		if (num_read >= num_recordings) {
+			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
+			return;
+		}
+
+		// need a current_buf variable
+		uint8_t current_id = recording_ids[num_read];
+		read_array_dma(recordings_buf2[current_id], recording_location_and_base_addrs[current_id], recording_offsets[current_id], DMA1_Channel4, SPI2);
+
+	} else if (DMA1_Channel5->CCR & DMA_CCR_EN) {
+		// Transmission
+		DMA1->IFCR |= DMA_IFCR_CTCIF5;
+		// Indicates we are done transmitting; do not need to do anything else, that will be handled by our keyboard functionality
+		DMA1_Channel5->CCR &= ~DMA_CCR_EN;
+
+		// assume it is a new recording; eventually we will have to check
+		num_recordings++;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
