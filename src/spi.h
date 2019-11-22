@@ -9,8 +9,8 @@ uint8_t recordings_buf2[NUM_CHANNELS][BUF_LEN];
 uint8_t recording_ids[NUM_CHANNELS];
 uint8_t recording_location_and_base_addrs[NUM_CHANNELS];
 uint16_t recording_offsets[NUM_CHANNELS];
-uint8_t num_recordings;
-uint8_t num_read;
+volatile uint8_t num_recordings;
+volatile uint8_t num_read;
 
 uint16_t recording_endings[16];
 
