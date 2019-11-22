@@ -34,27 +34,6 @@ void init_dma(void) {
 
 	// Channel 1 is for the ADC based on the FRM
 
-	// Channel 2 is for SPI1 Rx
-	DMA1_Channel2->CPAR = &SPI1->DR;
-	DMA1_Channel2->CCR &= ~DMA_CCR_DIR;
-	DMA1_Channel2->CCR |= DMA_CCR_MINC;
-	// Set memory address and count later on
-
-	DMA1_Channel2->CCR &= ~DMA_CCR_MSIZE;
-	DMA1_Channel2->CCR &= ~DMA_CCR_PSIZE;
-
-	DMA1_Channel2->CCR |= DMA_CCR_TCIE;
-
-	// Channel 3 is for SPI1 Tx
-	DMA1_Channel3->CPAR = &SPI1->DR;
-	DMA1_Channel3->CCR |= DMA_CCR_DIR;
-	DMA1_Channel3->CCR |= DMA_CCR_MINC;
-
-	DMA1_Channel3->CCR &= ~DMA_CCR_MSIZE;
-	DMA1_Channel3->CCR &= ~DMA_CCR_PSIZE;
-
-	DMA1_Channel3->CCR |= DMA_CCR_TCIE;
-
 	// Channel 4 is for SPI2 Rx
 	DMA1_Channel4->CPAR = &SPI2->DR;
 	DMA1_Channel4->CCR &= ~DMA_CCR_DIR;
@@ -75,7 +54,6 @@ void init_dma(void) {
 
 	DMA1_Channel5->CCR |= DMA_CCR_TCIE;
 
-	NVIC->ISER[0] |= 1 << DMA1_Channel2_3_IRQn;
 	NVIC->ISER[0] |= 1 << DMA1_Channel4_5_IRQn;
 }
 
@@ -178,12 +156,12 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address) {
 	GPIOB->BSRR |= 1 << 11;
 }
 
-void write_array_dma(uint8_t * array, uint8_t base, uint16_t offset, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
+void write_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
 	uint8_t address[3];
 
 	GPIOB->BRR |= 1 << 11;
 
-	address_lookup(address, base, offset);
+	address_lookup(address, recording_location_and_base_addrs[id], recording_offsets[id]);
 
 	while (spi->SR & SPI_SR_FTLVL);
 	*(uint8_t *)&spi->DR = 0x02;
@@ -197,14 +175,14 @@ void write_array_dma(uint8_t * array, uint8_t base, uint16_t offset, DMA_Channel
 	spi->CR2 |= SPI_CR2_TXDMAEN;
 }
 
-void read_array_dma(uint8_t * array, uint8_t base, uint16_t offset, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
+void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
 	uint16_t i;
 	uint8_t current_element;
 	uint8_t address[3];
 
 	GPIOB->BRR |= 1 << 11;
 
-	address_lookup(address, base, offset);
+	address_lookup(address, recording_location_and_base_addrs[id], recording_offsets[id]);
 
 	while (spi->SR & SPI_SR_FTLVL);
 	*(uint8_t *)&spi->DR = 0x03;
@@ -222,43 +200,10 @@ void read_array_dma(uint8_t * array, uint8_t base, uint16_t offset, DMA_Channel_
 	spi->CR1 |= SPI_CR1_RXONLY;
 }
 
-// This is where I will manage the work queues
-
-void DMA1_Channel2_3_IRQHandler(void) {
-	// Determine why this interrupt was called
-	if (DMA1_Channel2->CCR & DMA_CCR_EN) {
-		// Reception
-		num_read++;
-
-		SPI1->CR1 &= ~SPI_CR1_RXONLY;
-		GPIOB->BSRR |= 1 << 11;
-
-		DMA1->IFCR |= DMA_IFCR_CTCIF2;
-		DMA1_Channel2->CCR &= ~DMA_CCR_EN;
-
-		if (num_read >= num_recordings) {
-			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
-			return;
-		}
-
-		// need a current_buf variable
-		read_array_dma(recordings_buf1[num_read], recording_location_and_base_addrs[num_read], recording_offsets[num_read], DMA1_Channel2, SPI1);
-
-
-	} else if (DMA1_Channel3->CCR & DMA_CCR_EN) {
-		// Transmission
-		DMA1->IFCR |= DMA_IFCR_CTCIF3;
-		// Indicates we are done transmitting; do not need to do anything else, that will be handled by our keyboard functionality
-		DMA1_Channel3->CCR &= ~DMA_CCR_EN;
-
-		// assume it is a new recording; eventually we will have to check
-		num_recordings++;
-	}
-}
-
 void DMA1_Channel4_5_IRQHandler(void) {
 	uint8_t current_element;
 
+	while (SPI2->SR & SPI_SR_FTLVL);
 	GPIOB->BSRR |= 1 << 11;
 	if (DMA1_Channel4->CCR & DMA_CCR_EN) {
 		// Reception
@@ -278,7 +223,7 @@ void DMA1_Channel4_5_IRQHandler(void) {
 
 		// need a current_buf variable
 		uint8_t current_id = recording_ids[num_read];
-		read_array_dma(recordings_buf2[current_id], recording_location_and_base_addrs[current_id], recording_offsets[current_id], DMA1_Channel4, SPI2);
+		read_array_dma(recordings_buf2[current_id], current_id, DMA1_Channel4, SPI2);
 
 	} else if (DMA1_Channel5->CCR & DMA_CCR_EN) {
 		// Transmission
