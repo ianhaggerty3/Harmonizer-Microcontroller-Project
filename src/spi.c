@@ -156,6 +156,7 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address) {
 	GPIOB->BSRR |= 1 << 11;
 }
 
+// Initiates the process of writing to one channel's RAM memory. DMA settings are reset in a transfer complete interrupt
 void write_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
 	uint8_t address[3];
 
@@ -175,6 +176,7 @@ void write_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_chan
 	spi->CR2 |= SPI_CR2_TXDMAEN;
 }
 
+// Initiates the process of reading every channel that has been recorded so far; interrupts on DMA completion automatically handle the rest.s
 void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
 	uint16_t i;
 	uint8_t current_element;

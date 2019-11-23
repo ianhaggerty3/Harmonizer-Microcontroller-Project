@@ -1,0 +1,33 @@
+requirements.txt
+ Created on: Nov 22, 2019
+     Author: Ian Haggerty
+
+Next steps:
+
+Matt, ADC and DAC
+
+We need a function that can be called with a channel id number, that initiates recording of an audio sample with DAC. 
+Write an SPI transfer complete interrupt handler that moves the ADC to writing to the other buffer, then writes the first buffer.
+This should continue until either the recording time is up, or if a stop record button is pressed; not sure how to do the stop button thing.
+Once the recording is finished, the relevant global variables in spi.h should be updated.
+
+Once certain channels have been recorded, there needs to be some sort of control function which initiates writing to the DAC at the correct time.
+This is probably best done with DMA; Channel 3 is not being used right now, and it is intended for the DAC.
+Assume that all of the right buffers are filled when the previous DMA request is over, then combine all of the new
+buffers into one array and initiate writing it to the DAC. Perhaps we should have the "combined" array ready before the DAC needs more input; this
+could be done pretty easily at the end of the SPI transfer dma complete interrupt; the if statement that returns would be the place to do it.
+
+Cole, Keyboard and control flow
+Certain functionality of the keyboard will be important to the macro "features" of our project. We need to have a "record" button. The details are
+up to you, but the intended use should probably press the recording button and then press the channel you want to record in order to initiate it. I don't
+know if the record button should be on the keypad, or maybe we could just have that as a separate button with a dedicated GPIO pin. Similarly, we
+need a "stop recording" option. This could probably just be the recording button again. Pressing a channel without recording selected should play that
+channel. We may also want to have a "delete" channel button. A "continuous play" button would also be really nice, to just have the next channel pressed
+go on repeat. Lastly, we want an insanity button that just plays every recorded channel so far at once. Priority on recording button though, for a prototype.
+
+There will certainly be some ambiguous logic here; since the user can press any key at any time, I expect some bugs that we just won't care about.
+All of these operations should keep in mind the relevant global variables. While not all of them should be updated on button press, we need to keep
+them updated somewhere along the line. One potential problem I see is that we'll want to detect if a user re-records an old recording, as this
+could cause global variables to go out of wack with the number of recordings.
+
+I can help out whenever we meet, and just let me know if you need any help as I'm pretty much done figuring out the RAM. 
