@@ -111,6 +111,11 @@ int main(void) {
 	init_spi();
 	init_dma();
 
+	// Matt's main
+	setup_timers(9, 1199);
+	setup_dma();
+	// end of Matt's main
+
 #ifdef UNIT_TEST
 //	test_array_operation();
 	test_dma_array_operation();
