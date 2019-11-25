@@ -78,9 +78,7 @@ void record_save(){
     GPIOA->ODR &= ~(1<<8);
 
     //USE MIC TO RECORD AND STORE INTO SPI
-    //place holder wait
-    for (int x=0; x<30; x++)
-        nano_wait(100000000);
+
 
     //set all params back to idle state
     record=0;
@@ -91,17 +89,39 @@ void record_save(){
 }
 /////////////////////////////RECORD END//////////////////
 
+int get_channel_num(char ch) {
+    int ret_val;
+
+    ret_val = ch == '1' ? 0 : ret_val;
+    ret_val = ch == '2' ? 1 : ret_val;
+    ret_val = ch == '3' ? 2 : ret_val;
+    ret_val = ch == '4' ? 3 : ret_val;
+    ret_val = ch == '5' ? 4 : ret_val;
+    ret_val = ch == '6' ? 5 : ret_val;
+    ret_val = ch == '7' ? 6 : ret_val;
+    ret_val = ch == '8' ? 7 : ret_val;
+    ret_val = ch == '9' ? 8 : ret_val;
+    ret_val = ch == 'A' ? 9 : ret_val;
+    ret_val = ch == 'B' ? 10 : ret_val;
+    ret_val = ch == 'C' ? 11 : ret_val;
+
+}
+
 /////////////////////////////PLAYBACK START//////////////
-void playback(char ch){
-    if (ch=='1'){
-        //READ FROM SPI AND PLAY AUDIO FOR CH1 RECORDING W/ SPEAKER
-    }
-    else if (ch=='2'){
-        //READ FROM SPI AND PLAY AUDIO FOR CH2 RECORDING W/ SPEAKER
-    }
-    else if (ch=='3'){
-        //READ FROM SPI AND PLAY AUDIO FOR CH3 RECORDING W/ SPEAKER
-    }
+void playback(char ch) {
+    int channel_num;
+
+    channel_num = get_channel_num(ch); //gets ch num
+    if (!get_channel_num(recording_ids, num_recordings, channel_num)) return; //returns if not already recorded
+
+    recording_offsets[channel_num]= 0;
+    if (get_channel_num(playback_ids, num_to_read, channel_num)) //if audio is currently playing
+        return;
+
+    //its not currently playing, add to playback queue
+    playback_ids[num_to_read] = channel_num;
+
+    num_to_read++;
 }
 /////////////////////////////PLAYBACK END//////////////
 

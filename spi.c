@@ -9,6 +9,17 @@
 
 #include "spi.h"
 
+int lookup_id(uint8_t * arr, int len, int id) {
+    int i;
+
+    for (i = 0; i < len; i++) {
+        if (id == arr[i]) {
+            return 1;
+        }
+    }
+    return -1;
+}
+
 uint8_t device_lookup(uint8_t base) {
 	// Yet to be implemented; may want to return a pointer to GPIOA or something
 
@@ -218,13 +229,13 @@ void DMA1_Channel4_5_IRQHandler(void) {
 		DMA1->IFCR |= DMA_IFCR_CTCIF4;
 		DMA1_Channel4->CCR &= ~DMA_CCR_EN;
 
-		if (num_read >= num_recordings) {
+		if (num_read >= num_to_read) {
 			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
 			return;
 		}
 
 		// need a current_buf variable
-		uint8_t current_id = recording_ids[num_read];
+		uint8_t current_id = playback_ids[num_read];
 		read_array_dma(recordings_buf2[current_id], current_id, DMA1_Channel4, SPI2);
 
 	} else if (DMA1_Channel5->CCR & DMA_CCR_EN) {
