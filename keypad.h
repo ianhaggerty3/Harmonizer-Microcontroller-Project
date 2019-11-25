@@ -10,12 +10,12 @@ void setup_timer6(void);
 void nano_wait(unsigned long n);
 
 void record_init(void);
-void record_select_ch(char);
-void record_save(void);
+void record_select_ch(int);
+void record_save(int);
 
-void playback(char);
+void playback(int);
 
 void delete_init();
-void delete_select_ch(char);
+void delete_select_ch(int);
 
 void pulse_led(int);

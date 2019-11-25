@@ -7,7 +7,6 @@
 int record=0;
 int record_ch=0;
 
-int ch_select=0;
 int delete=0;
 int col = 0;
 int8_t history[16] = {0};
@@ -24,27 +23,29 @@ void keypad_driver()
     while(1) {
 
         char key = get_char_key();
+        int channel = get_channel(key);
 
         ///recording stuff
-        if ((key == '*') & record_ch==0) //initiate recording
+        if ((key == '*') && record_ch==0) //initiate recording
               record_init(); //sets record=1
-        if (((key == '1')|(key == '2')|(key == '3')) & record==1) //setting ch to record to
-            record_select_ch(key); //sets record_ch=1
-        if ((key == '*') & record_ch==1)
-            record_save();
-
+        if (channel >= 0 && record==1) //setting ch to record to
+            record_select_ch(channel); //sets record_ch=1
+        if ((key == '*') && record_ch==1) record_save(channel);
 
         ///playback stuff
-        if (((key == '1')|(key == '2')|(key == '3')) & record==0)
-            playback(key);
-
+        if (channel >= 0 && record==0)
+            playback(channel);
 
         //delete stuff
-        if (key == 'D'){
+        if (key == 'D') {
             delete_init();
         }
-        if (((key == '1')|(key == '2')|(key == '3')) & delete==1)
-            delete_select_ch(key);
+        if (channel >= 0 && delete==1)
+            delete_select_ch(channel);
+
+        if (key == '#') {
+        	go_crazy();
+        }
 
     }
 }
@@ -55,42 +56,28 @@ void record_init(){
     GPIOA->ODR |= 1<<8;
     record=1;
 }
-void record_select_ch(char ch){
-    if (ch=='1'){
-        pulse_led(1);
-        record_ch=1;
-        ch_select=1;
-    }
-    else if (ch=='2'){
-        pulse_led(2);
-        record_ch=1;
-        ch_select=2;
-    }
-    else if (ch=='3'){
-        pulse_led(3);
-        record_ch=1;
-        ch_select=3;
-    }
+void record_select_ch(int ch){
+    record_ch = 1;
+    pulse_led(ch + 1);
 }
-void record_save(){
+void record_save(int ch){
     for (int x=0; x<18; x++)
         nano_wait(100000000);
     GPIOA->ODR &= ~(1<<8);
 
     //USE MIC TO RECORD AND STORE INTO SPI
-
+    dmarecord(ch);
 
     //set all params back to idle state
     record=0;
     record_ch=0;
-    ch_select=0;
     pulse_led(1);
     GPIOA->ODR &= ~(1<<8);
 }
 /////////////////////////////RECORD END//////////////////
 
-int get_channel_num(char ch) {
-    int ret_val;
+int get_channel(char ch) {
+    int ret_val = -1;
 
     ret_val = ch == '1' ? 0 : ret_val;
     ret_val = ch == '2' ? 1 : ret_val;
@@ -105,23 +92,22 @@ int get_channel_num(char ch) {
     ret_val = ch == 'B' ? 10 : ret_val;
     ret_val = ch == 'C' ? 11 : ret_val;
 
+    return ret_val;
 }
 
 /////////////////////////////PLAYBACK START//////////////
-void playback(char ch) {
-    int channel_num;
+void playback(int ch) {
+    if (get_channel(recording_ids, num_recordings, ch) == -1) return; //returns if not already recorded
 
-    channel_num = get_channel_num(ch); //gets ch num
-    if (!get_channel_num(recording_ids, num_recordings, channel_num)) return; //returns if not already recorded
-
-    recording_offsets[channel_num]= 0;
-    if (get_channel_num(playback_ids, num_to_read, channel_num)) //if audio is currently playing
+    recording_offsets[ch]= 0;
+    if (get_channel(playback_ids, num_to_read, ch) == -1) //if audio is currently playing
         return;
 
     //its not currently playing, add to playback queue
-    playback_ids[num_to_read] = channel_num;
-
+    playback_ids[num_to_read] = ch;
     num_to_read++;
+
+    dmaplayback();
 }
 /////////////////////////////PLAYBACK END//////////////
 
@@ -132,22 +118,38 @@ void delete_init(){
     delete=1;
 }
 
-void delete_select_ch(char ch){
-    if (ch=='1'){
-        //DELETE AUDIO FROM SPI FOR CH1
-    }
-    else if (ch=='2'){
-        //DELETE AUDIO FROM SPI FOR CH2
-    }
-    else if (ch=='3'){
-        //DELETE AUDIO FROM SPI FOR CH3
-    }
+void delete_select_ch(int ch){
+	int index;
+
+	index = get_channel(recording_ids, num_recordings, ch);
+	if (index == -1) return;
+
+	num_recordings--;
+	recording_ids[index] = recording_ids[num_recordings];
+
+	index = get_channel(playback_ids, num_to_read, ch);
+	if (index == -1) return;
+
+	num_to_read--;
+	playback_ids[index] = playback_ids[num_to_read];
 
     //set param back to idle state
     delete=0;
 }
 /////////////////////////////DELETE END//////////////
 
+/////////////////////////////CRAZY START//////////////
+void go_crazy(void) {
+	int i;
+
+	for (i = 0; i < num_recordings; i++) {
+		recording_offsets[i] = 0;
+		playback_ids[i] = recording_ids[i];
+	}
+	num_to_read = num_recordings;
+}
+
+/////////////////////////////CRAZY END//////////////
 
 void pulse_led(int count){
     for (int x=0; x<count; x++){

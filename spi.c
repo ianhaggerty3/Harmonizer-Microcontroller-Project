@@ -14,7 +14,7 @@ int lookup_id(uint8_t * arr, int len, int id) {
 
     for (i = 0; i < len; i++) {
         if (id == arr[i]) {
-            return 1;
+            return i;
         }
     }
     return -1;
@@ -236,7 +236,7 @@ void DMA1_Channel4_5_IRQHandler(void) {
 
 		// need a current_buf variable
 		uint8_t current_id = playback_ids[num_read];
-		read_array_dma(recordings_buf2[current_id], current_id, DMA1_Channel4, SPI2);
+		read_array_dma(recordings_buf[current_id], current_id, DMA1_Channel4, SPI2);
 
 	} else if (DMA1_Channel5->CCR & DMA_CCR_EN) {
 		// Transmission
