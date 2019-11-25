@@ -1,19 +1,6 @@
-#include "stm32f0xx.h"
-#include "stm32f0_discovery.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include "adc.h"
 
-char totalbuff[12][128];
-char buttons[16] = {0};
-char output[128];
-short int chanloops[16];
-int soundloops = 0;
-char record = 0;
-char currrec = 0;
-int offset = 0;
-
-setup_gpio_adc(){
+void setup_gpio_adc(){
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOCEN;
     GPIOA->MODER |= 0x33c;
 }
