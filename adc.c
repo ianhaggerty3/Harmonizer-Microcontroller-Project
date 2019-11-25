@@ -77,7 +77,8 @@ void dmaplayback(){
     DMA1_Channel1->CNDTR = 128;
     DMA1_Channel1->CMAR = (uint32_t) output;
     DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR8R1));
-    DMA1_Channel1->CCR |= DMA_CCR_EN;
+    DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
+    NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
 
 void dmarecord(int chan){
@@ -87,7 +88,12 @@ void dmarecord(int chan){
     DMA1_Channel1->CNDTR = 128;
     DMA1_Channel1->CMAR = (uint32_t) totalbuff[chan];
     DMA1_Channel1->CPAR = (uint32_t) (&(ADC1->DR));
-    DMA1_Channel1->CCR |= DMA_CCR_EN;
+    DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
+    NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
+}
+
+void DMA1_Channel1_IRQHandler(){
+    DMA1_Channel1->CCR &= ~DMA_CCR_EN;
 }
 
 //int main(void)
