@@ -11,7 +11,7 @@
 
 uint8_t device_lookup(uint8_t base) {
 	// Yet to be implemented; may want to return a pointer to GPIOA or something
-    // test post plz ignore
+
 	return 0x00;
 }
 

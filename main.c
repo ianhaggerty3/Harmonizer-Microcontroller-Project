@@ -13,7 +13,6 @@
 #include "stm32f0_discovery.h"
 
 #include "spi.h"
-#include "keypad.h"
 
 void nano_wait(unsigned int n) {
     asm(    "        mov r0,%0\n"
@@ -116,11 +115,6 @@ int main(void) {
 	setup_timers(9, 1199);
 	setup_dma();
 	// end of Matt's main
-
-    //keypad stuff
-	setup_keypad();
-    setup_gpio();
-
 
 #ifdef UNIT_TEST
 //	test_array_operation();

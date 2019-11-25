@@ -1,8 +1,8 @@
 #define MEM_SIZE 131072
-#define MEM_SEGMENTS 4 
+#define MEM_SEGMENTS 4
 #define BUF_LEN 128
 #define BUF_COUNT ((MEM_SIZE / MEM_SEGMENTS) / BUF_LEN)
-#define NUM_CHANNELS 12
+#define NUM_CHANNELS 16
 
 uint8_t recordings_buf1[NUM_CHANNELS][BUF_LEN];
 uint8_t recordings_buf2[NUM_CHANNELS][BUF_LEN];
@@ -11,6 +11,8 @@ uint8_t recording_location_and_base_addrs[NUM_CHANNELS];
 uint16_t recording_offsets[NUM_CHANNELS];
 volatile uint8_t num_recordings;
 volatile uint8_t num_read;
+
+uint16_t recording_endings[16];
 
 uint8_t device_lookup(uint8_t base);
 void address_lookup(uint8_t * address_array, uint8_t base, uint16_t offset);
