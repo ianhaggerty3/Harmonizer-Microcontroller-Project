@@ -1,8 +1,11 @@
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
-#include "keypad.h"
 #include <stdint.h>
 #include <math.h>
+
+#include "keypad.h"
+#include "spi.h"
+#include "adc.h"
 
 int record=0;
 int record_ch=0;
@@ -13,9 +16,7 @@ int8_t history[16] = {0};
 int8_t lookup[16] = {1,4,7,0xe,2,5,8,0,3,6,9,0xf,0xa,0xb,0xc,0xd};
 char char_lookup[16] = {'1','4','7','*','2','5','8','0','3','6','9','#','A','B','C','D'};
 
-
-void keypad_driver()
-{
+void keypad_driver() {
     setup_keypad();
     setup_led();
     setup_timer6();
@@ -54,7 +55,7 @@ void keypad_driver()
         }
 
         if (channel >= 0 && delete == 1) {
-            delete_select_ch(key);
+            delete_select_ch(channel);
         }
     }
 }
@@ -70,23 +71,15 @@ void record_init(){
     GPIOA->ODR |= 1<<8;
     record=1;
 }
-void record_select_ch(int ch){
-    record_ch = 1;
-    pulse_led(ch + 1);
-}
+
 void record_save(int ch){
-    for (int x=0; x<18; x++)
-        nano_wait(100000000);
     GPIOA->ODR &= ~(1<<8);
 
     //USE MIC TO RECORD AND STORE INTO SPI
     dmarecord(ch);
 
-    //set all params back to idle state
-    record=0;
-    record_ch=0;
-    pulse_led(1);
-    GPIOA->ODR &= ~(1<<8);
+//    pulse_led(1);
+//    GPIOA->ODR &= ~(1<<8);
 }
 /////////////////////////////RECORD END//////////////////
 
@@ -111,10 +104,10 @@ int get_channel(char ch) {
 
 /////////////////////////////PLAYBACK START//////////////
 void playback(int ch) {
-    if (get_channel(recording_ids, num_recordings, ch) == -1) return; //returns if not already recorded
+    if (lookup_id(recording_ids, num_recordings, ch) == -1) return; //returns if not already recorded
 
     recording_offsets[ch]= 0;
-    if (get_channel(playback_ids, num_to_read, ch) == -1) //if audio is currently playing
+    if (lookup_id(playback_ids, num_to_read, ch) == -1) //if audio is currently playing
         return;
 
     //its not currently playing, add to playback queue
@@ -132,23 +125,20 @@ void delete_init() {
     delete=1;
 }
 
-void delete_select_ch(char key){
+void delete_select_ch(int ch){
 	int index;
 
-	index = get_channel(recording_ids, num_recordings, key);
+	index = lookup_id(recording_ids, num_recordings, ch);
 	if (index == -1) return;
 
 	num_recordings--;
 	recording_ids[index] = recording_ids[num_recordings];
 
-	index = get_channel(playback_ids, num_to_read, key);
+	index = lookup_id(playback_ids, num_to_read, ch);
 	if (index == -1) return;
 
 	num_to_read--;
 	playback_ids[index] = playback_ids[num_to_read];
-
-    //set param back to idle state
-    delete=0;
 }
 /////////////////////////////DELETE END//////////////
 
@@ -273,12 +263,3 @@ void TIM6_DAC_IRQHandler() { //tiggers every 1ms to scan keypad
         col=0;
     GPIOB->ODR = (1<<col);
 }
-
-void nano_wait(unsigned long n) {
-    asm(    "        mov r0,%0\n"
-
-            "repeat: sub r0,#83\n"
-
-            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
-}
-

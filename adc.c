@@ -1,10 +1,23 @@
-#include "adc.h"
+#include "stm32f0xx.h"
+#include "stm32f0_discovery.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
-void setup_gpio_adc(){
+#include "adc.h"
+#include "spi.h"
+
+short int chanloops[12];
+int soundloops = 0;
+char adc_record = 0;
+char currrec = 0;
+int offset = 0;
+int record_offset;
+
+void setup_gpio_adc() {
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOCEN;
     GPIOA->MODER |= 0x33c;
 }
-
 
 //setup_timers(9, 1199);
 void setup_timers(int psc, int arr){
@@ -40,12 +53,12 @@ void setup_adc() {
     while((ADC1->CR & ADC_CR_ADSTART));
 }
 
-void setup_dac(){
+void setup_dac() {
     RCC->APB1ENR |= RCC_APB1ENR_DACEN;
     DAC->CR |= DAC_CR_EN1 | DAC_CR_DMAEN1;
 }
 
-void setup_dma(uint32_t location){
+void setup_dma(uint32_t location) {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1->CCR &= !DMA_CCR_EN;
     DMA1_Channel1->CCR &= ~(DMA_CCR_MSIZE | DMA_CCR_PSIZE| DMA_CCR_DIR);
@@ -55,49 +68,57 @@ void setup_dma(uint32_t location){
     DMA1_Channel1->CNDTR = 128;
 }
 
-void TIM3_IRQHandler(){
-    totalbuff[currrec][offset] = read_adc_channel(1);
+void TIM3_IRQHandler() {
+//    recordings_buf[currrec][offset] = read_adc_channel(1);
     offset++;
     if(offset >= 100){
         //Enable DMA
         offset = 0;
         soundloops++;
     }
-    if(record == 0){
+    if(adc_record == 0){
         TIM3->CR1 &= ~TIM_CR1_CEN;
         chanloops[currrec] = soundloops;
         soundloops = 0;
     }
 }
 
-void dmaplayback(){
+void dmaplayback() {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1->CCR &= ~(DMA_CCR_MSIZE | DMA_CCR_PSIZE | DMA_CCR_PINC);
-    DMA1_Channel1->CCR |= (DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_DIR | DMA_CCR_MINC);
-    DMA1_Channel1->CNDTR = 128;
+//    DMA1_Channel1->CCR |= (DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_DIR | DMA_CCR_MINC);
+	DMA1_Channel1->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC);
+    DMA1_Channel1->CNDTR = BUF_LEN;
     DMA1_Channel1->CMAR = (uint32_t) output;
     DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR8R1));
     DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
     NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
 
-void dmarecord(int chan){
+void dmarecord(int chan) {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1->CCR &= ~(DMA_CCR_MSIZE | DMA_CCR_PSIZE | DMA_CCR_PINC | DMA_CCR_DIR);
-    DMA1_Channel1->CCR |= (DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_MINC);
-    DMA1_Channel1->CNDTR = 128;
-    DMA1_Channel1->CMAR = (uint32_t) totalbuff[chan];
+//    DMA1_Channel1->CCR |= (DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_MINC);
+    DMA1_Channel1->CCR |= DMA_CCR_MINC;
+    DMA1_Channel1->CNDTR = BUF_LEN;
+    DMA1_Channel1->CMAR = (uint32_t) &(recordings_buf[chan]);
     DMA1_Channel1->CPAR = (uint32_t) (&(ADC1->DR));
     DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
     NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
 
-void DMA1_Channel1_IRQHandler(){
+void DMA1_Channel1_IRQHandler() {
+	// called on transfer complete;
     DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+
+    if (DMA1_Channel1->CCR & DMA_CCR_DIR) {
+    	// Playing back audio
+
+
+    } else {
+    	// Recording audio
+
+
+    }
 }
 
-//int main(void)
-//{
-//    setup_timers(9, 1199);
-//    setup_dma();/
-//}

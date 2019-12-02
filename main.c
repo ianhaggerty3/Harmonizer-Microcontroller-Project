@@ -12,13 +12,10 @@
 #include "stm32f0xx.h"
 #include "stm32f0_discovery.h"
 
+#include "adc.h"
 #include "spi.h"
 
-void nano_wait(unsigned int n) {
-    asm(    "        mov r0,%0\n"
-            "repeat: sub r0,#83\n"
-            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
-}
+#define UNIT_TEST
 
 #ifdef UNIT_TEST
 
@@ -113,7 +110,7 @@ int main(void) {
 
 	// Matt's main
 	setup_timers(9, 1199);
-	setup_dma();
+//	setup_dma();
 	// end of Matt's main
 
 #ifdef UNIT_TEST

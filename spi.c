@@ -9,6 +9,14 @@
 
 #include "spi.h"
 
+void nano_wait(unsigned long n) {
+    asm(    "        mov r0,%0\n"
+
+            "repeat: sub r0,#83\n"
+
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
+
 int lookup_id(uint8_t * arr, int len, int id) {
     int i;
 
