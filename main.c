@@ -39,6 +39,14 @@ void test_array_operation(void) {
 	nano_wait(100);
 }
 
+void zero_arr(uint8_t * arr) {
+	int i;
+
+	for (i = 0; i < BUF_LEN; i++) {
+		arr[i] = 0;
+	}
+}
+
 void test_dma_array_operation(void) {
 	int i;
 
@@ -46,9 +54,9 @@ void test_dma_array_operation(void) {
 	recording_ids[1] = 4;
 	recording_ids[2] = 3;
 	for (i = 0; i < BUF_LEN; i++) {
-		recordings_buf1[0][i] = i;
-		recordings_buf1[4][i] = i;
-		recordings_buf1[3][i] = i;
+		recordings_buf[0][i] = i;
+		recordings_buf[4][i] = i;
+		recordings_buf[3][i] = i;
 	}
 	recording_location_and_base_addrs[0] = 0x00;
 	recording_location_and_base_addrs[4] = 0x01;
@@ -58,20 +66,29 @@ void test_dma_array_operation(void) {
 	}
 
 	num_recordings = 0;
-	write_array_dma(recordings_buf1[0], 0, DMA1_Channel5, SPI2);
+	write_array_dma(recordings_buf[0], 0, DMA1_Channel5, SPI2);
 	while (num_recordings == 0);
-	write_array_dma(recordings_buf1[4], 4, DMA1_Channel5, SPI2);
+	write_array_dma(recordings_buf[4], 4, DMA1_Channel5, SPI2);
 	while (num_recordings == 1);
-	write_array_dma(recordings_buf1[3], 3, DMA1_Channel5, SPI2);
+	write_array_dma(recordings_buf[3], 3, DMA1_Channel5, SPI2);
 	while (num_recordings == 2);
 
-	read_array_dma(recordings_buf2[0], 0, DMA1_Channel4, SPI2);
+	zero_arr(recordings_buf[0]);
+	zero_arr(recordings_buf[4]);
+	zero_arr(recordings_buf[3]);
+
+	num_to_read = 3;
+	playback_ids[0] = 0;
+	playback_ids[1] = 4;
+	playback_ids[2] = 3;
+
+	read_array_dma(recordings_buf[0], 0, DMA1_Channel4, SPI2);
 	while (num_read != 3);
 
 	for (i = 0; i < BUF_LEN; i++) {
-		if (recordings_buf2[0][i] != i
-		 || recordings_buf2[4][i] != i
-		 || recordings_buf2[3][i] != i) {
+		if (recordings_buf[0][i] != i
+		 || recordings_buf[4][i] != i
+		 || recordings_buf[3][i] != i) {
 			nano_wait(1);
 		}
 	}

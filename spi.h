@@ -8,10 +8,7 @@
 #define NUM_CHANNELS 16
 
 uint8_t recordings_buf[NUM_CHANNELS][BUF_LEN];
-char output[BUF_LEN];
-void nano_wait(unsigned long n);
-uint8_t recordings_buf1[NUM_CHANNELS][BUF_LEN];
-uint8_t recordings_buf2[NUM_CHANNELS][BUF_LEN];
+uint8_t output[BUF_LEN];
 uint8_t recording_ids[NUM_CHANNELS];
 uint8_t recording_location_and_base_addrs[NUM_CHANNELS];
 uint16_t recording_offsets[NUM_CHANNELS];
@@ -21,6 +18,7 @@ uint8_t playback_ids[NUM_CHANNELS];
 volatile uint8_t num_to_read;
 volatile uint8_t num_read;
 
+void nano_wait(unsigned long n);
 int lookup_id(uint8_t * arr, int len, int id);
 uint8_t device_lookup(uint8_t base);
 void address_lookup(uint8_t * address_array, uint8_t base, uint16_t offset);
