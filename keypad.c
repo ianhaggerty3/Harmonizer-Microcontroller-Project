@@ -21,33 +21,47 @@ void keypad_driver()
     setup_timer6();
 
     while(1) {
-
         char key = get_char_key();
         int channel = get_channel(key);
 
-        ///recording stuff
-        if ((key == '*') && record_ch==0) //initiate recording
-              record_init(); //sets record=1
-        if (channel >= 0 && record==1) //setting ch to record to
-            record_select_ch(channel); //sets record_ch=1
-        if ((key == '*') && record_ch==1) record_save(channel);
+        if ((key == '*') && record_ch==0) {
+        	reset_state();
+            record_init(); // sets record = 1
+        }
 
-        ///playback stuff
-        if (channel >= 0 && record==0)
+		if (key == 'D') {
+			reset_state();
+			delete_init(); // sets delete = 1
+		}
+
+		if (key == '#') {
+			reset_state();
+			go_crazy();
+		}
+
+		if (key == '0') {
+			// continuous mode
+		}
+
+        if (channel >= 0 && record == 0 && delete == 0) {
             playback(channel);
-
-        //delete stuff
-        if (key == 'D') {
-            delete_init();
-        }
-        if (channel >= 0 && delete==1)
-            delete_select_ch(channel);
-
-        if (key == '#') {
-        	go_crazy();
         }
 
+        if (channel >= 0 && record == 1) {
+        	// record the selected channel
+            reset_state();
+        	record_save(channel);
+        }
+
+        if (channel >= 0 && delete == 1) {
+            delete_select_ch(key);
+        }
     }
+}
+
+void reset_state(void) {
+	record = 0;
+	delete = 0;
 }
 
 /////////////////////////////RECORD START//////////////////
@@ -112,22 +126,22 @@ void playback(int ch) {
 /////////////////////////////PLAYBACK END//////////////
 
 /////////////////////////////DELETE START//////////////
-void delete_init(){
+void delete_init() {
     pulse_led(1);
     GPIOA->ODR &= ~(1<<8);
     delete=1;
 }
 
-void delete_select_ch(int ch){
+void delete_select_ch(char key){
 	int index;
 
-	index = get_channel(recording_ids, num_recordings, ch);
+	index = get_channel(recording_ids, num_recordings, key);
 	if (index == -1) return;
 
 	num_recordings--;
 	recording_ids[index] = recording_ids[num_recordings];
 
-	index = get_channel(playback_ids, num_to_read, ch);
+	index = get_channel(playback_ids, num_to_read, key);
 	if (index == -1) return;
 
 	num_to_read--;
