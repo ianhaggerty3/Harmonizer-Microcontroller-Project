@@ -32,4 +32,6 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address);
 void write_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi);
 void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi);
 
+void record_loc(int, int);
+
 #endif

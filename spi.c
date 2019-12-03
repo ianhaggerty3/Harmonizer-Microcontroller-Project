@@ -30,8 +30,21 @@ int lookup_id(uint8_t * arr, int len, int id) {
 
 uint8_t device_lookup(uint8_t base) {
 	// Yet to be implemented; may want to return a pointer to GPIOA or something
-
-	return 0x00;
+    //Returns either 11, 12, 8, or 9
+   uint8_t output;
+   if(((base >> 2) & 0x3) == 0){
+       output = 8;
+   }
+   else if (((base >> 2) & 0x3) == 1){
+       output = 9;
+   }
+   else if (((base >> 2) & 0x3) == 2){
+       output = 11;
+   }
+   else{
+       output = 12;
+   }
+	return output;
 }
 
 void address_lookup(uint8_t * address_array, uint8_t base, uint16_t offset) {
@@ -179,7 +192,7 @@ void read_array(uint8_t * array, uint16_t len, uint8_t address) {
 void write_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
 	uint8_t address[3];
 
-	GPIOB->BRR |= 1 << 11;
+	GPIOB->BRR |= 1 << device_lookup(recording_location_and_base_addrs[id]);
 
 	address_lookup(address, recording_location_and_base_addrs[id], recording_offsets[id]);
 
@@ -201,7 +214,7 @@ void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_chann
 	uint8_t current_element;
 	uint8_t address[3];
 
-	GPIOB->BRR |= 1 << 11;
+	GPIOB->BRR |= 1 << device_lookup(recording_location_and_base_addrs[id]);
 
 	address_lookup(address, recording_location_and_base_addrs[id], recording_offsets[id]);
 
@@ -256,6 +269,23 @@ void DMA1_Channel4_5_IRQHandler(void) {
 		// assume it is a new recording; eventually we will have to check
 		num_recordings++;
 	}
+}
+
+void record_loc(int chip, int base){
+    if(base >= (MEM_SIZE * 3 / 4)){
+        recording_location_and_base_addrs[chip] = 3;
+    }
+    else if (base >= (MEM_SIZE * 2 / 4)){
+        recording_location_and_base_addrs[chip] = 2;
+    }
+    else if (base >= (MEM_SIZE * 1 / 4)){
+        recording_location_and_base_addrs[chip] = 1;
+    }
+    else{
+        recording_location_and_base_addrs[chip] = 0;
+    }
+
+    recording_location_and_base_addrs[chip] |= chip << 2;;
 }
 
 
