@@ -68,6 +68,7 @@ void setup_dma(uint32_t location) {
     DMA1_Channel1->CNDTR = 128;
 }
 
+// TODO: Possibly obsolete?
 void TIM3_IRQHandler() {
 //    recordings_buf[currrec][offset] = read_adc_channel(1);
     offset++;
@@ -107,12 +108,31 @@ void dmarecord(int chan) {
     NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
 
+void generate_output(void) {
+	int i;
+
+	for (i = 0; i < BUF_LEN; i++) {
+		// Temporary fix to combining audio channels by just using channel 0.
+		output[i] = recordings_buf[0][i];
+	}
+}
+
 void DMA1_Channel1_IRQHandler() {
 	// called on transfer complete;
     DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+    int current_id;
 
     if (DMA1_Channel1->CCR & DMA_CCR_DIR) {
     	// Playing back audio
+    	DMA1_Channel1->CNDTR = BUF_LEN;
+    	DMA1_Channel1->CCR |= DMA_CCR_EN;
+
+    	// Generate output afterwards to avoid taking too long before writing to the DAC
+    	generate_output();
+
+    	current_id = playback_ids[0];
+    	if ()
+    	read_array_dma(recordings_buf[current_id], current_id, DMA1_Channel4, SPI2);
 
 
     } else {
