@@ -95,6 +95,7 @@ void test_buf_count(void) {
 
 int main(void) {
 
+	int i;
 	// Note: we have 8 kB of memory on the chip
 
 	init_spi();
@@ -114,6 +115,10 @@ int main(void) {
 	setup_timer6();
 	setup_led();
 	// end of Cole's main
+
+	for (i = 0; i < NUM_CHANNELS; i++) {
+		recording_offsets[i] = 0;
+	}
 
 #ifdef UNIT_TEST
 //	test_array_operation();

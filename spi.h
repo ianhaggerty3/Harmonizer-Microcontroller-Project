@@ -9,7 +9,7 @@
 #define NUM_CHANNELS 12
 
 uint8_t recordings_buf[NUM_CHANNELS][BUF_LEN];
-uint16_t output[BUF_LEN];
+uint8_t output[BUF_LEN];
 uint8_t recording_ids[NUM_CHANNELS];
 uint8_t recording_locations[NUM_CHANNELS];
 uint16_t recording_offsets[NUM_CHANNELS];

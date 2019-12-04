@@ -51,7 +51,8 @@ void dmaplayback() {
 	DMA1_Channel1->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC);
     DMA1_Channel1->CNDTR = BUF_LEN;
     DMA1_Channel1->CMAR = (uint32_t) output;
-    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR12R1));
+//    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR12R1));
+    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR8R1));
     DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
     NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
@@ -71,14 +72,15 @@ void dmarecord(int chan) {
 
 void generate_output(void) {
 	int i;
-	int j;
+//	int j;
 
 	for (i = 0; i < BUF_LEN; i++) {
 		// Temporary fix to combining audio channels by just using channel 0.
-		output[i] = 0;
-		for (j = 0; j < num_to_read; j++) {
-			output[i] += (recordings_buf[playback_ids[j]][i] << 4) / num_to_read;
-		}
+//		output[i] = 0;
+//		for (j = 0; j < num_to_read; j++) {
+//			output[i] += (recordings_buf[playback_ids[j]][i] << 4) / num_to_read;
+//		}
+		output[i] = recordings_buf[0][i];
 	}
 }
 
@@ -111,6 +113,8 @@ void DMA1_Channel1_IRQHandler() {
     	// Generate output afterwards to avoid taking too long before writing to the DAC
     	generate_output();
     	update_queue();
+
+    	num_read = 0;
 
     	if (num_to_read == 0) {
     	    DMA1_Channel1->CCR &= ~DMA_CCR_EN;
