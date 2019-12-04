@@ -199,6 +199,8 @@ void DMA1_Channel4_5_IRQHandler(void) {
 		DMA1->IFCR |= DMA_IFCR_CTCIF4;
 		DMA1_Channel4->CCR &= ~DMA_CCR_EN;
 
+		recording_offsets[current_id] += BUF_LEN;
+
 		if (num_read >= num_to_read) {
 			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
 			return;
@@ -213,13 +215,11 @@ void DMA1_Channel4_5_IRQHandler(void) {
 		current_id = recording_ids[num_recordings];
 		pin = device_lookup(recording_locations[current_id]);
 		GPIOB->BSRR |= 1 << pin;
+		recording_offsets[current_id] += BUF_LEN;
 		DMA1->IFCR |= DMA_IFCR_CTCIF5;
 		SPI2->CR2 &= ~SPI_CR2_TXDMAEN;
 		// Indicates we are done transmitting; do not need to do anything else, that will be handled by our keyboard functionality
 		DMA1_Channel5->CCR &= ~DMA_CCR_EN;
-
-		// assume it is a new recording; eventually we will have to check
-		num_recordings++;
 	}
 }
 

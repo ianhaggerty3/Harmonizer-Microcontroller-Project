@@ -103,9 +103,17 @@ int main(void) {
 	initialize_locations();
 
 	// Matt's main
+	setup_gpio_adc();
 	setup_timers(9, 1199);
-//	setup_dma();
+	setup_adc();
+	setup_dac();
 	// end of Matt's main
+
+	// Cole's main
+	setup_keypad();
+	setup_timer6();
+	setup_led();
+	// end of Cole's main
 
 #ifdef UNIT_TEST
 //	test_array_operation();
@@ -114,7 +122,5 @@ int main(void) {
 	test_buf_count();
 #endif
 
-//	DMA1
-
-	for(;;);
+	keypad_driver();
 }
