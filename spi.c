@@ -49,10 +49,8 @@ uint8_t device_lookup(uint8_t base) {
 
 void address_lookup(uint8_t * address_array, uint8_t base, uint16_t offset) {
 	uint32_t address;
-	if (base > (MEM_SEGMENTS - 1)) {
-		return;
-	}
-	address = (MEM_SIZE / MEM_SEGMENTS) * base;
+
+	address = (MEM_SIZE / MEM_SEGMENTS) * (base & 0x3);
 	address += offset;
 
 	address_array[0] = (address & 0xff0000) >> (2 * 8);
@@ -95,10 +93,12 @@ void init_spi(void) {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
 
 	// Manual SS for memory chips output
+	GPIOB->MODER |= (1 << (2 * 8));
+	GPIOB->MODER |= (1 << (2 * 9));
 	GPIOB->MODER |= (1 << (2 * 11));
 
 	// Set up pins for alternate function
-	GPIOB->MODER |= (2 << (2 * 12));
+	GPIOB->MODER |= (2 << (2 * 12)); // This one is not actually used for analog
 	GPIOB->MODER |= (2 << (2 * 13));
 	GPIOB->MODER |= (2 << (2 * 14));
 	GPIOB->MODER |= (2 << (2 * 15));
@@ -119,82 +119,24 @@ void init_spi(void) {
 	SPI2->CR1 |= SPI_CR1_SSM;
 	SPI2->CR1 |= SPI_CR1_SSI;
 
+	GPIOB->BSRR = 1 << 8;
+	GPIOB->BSRR = 1 << 9;
 	GPIOB->BSRR = 1 << 11;
 
 	// Enable SPI communication
 	SPI2->CR1 |= SPI_CR1_SPE;
 }
 
-void write_array(uint8_t * array, uint16_t len, uint8_t address) {
-	// We need 24 bits for all of the addresses
-	uint16_t i;
-	uint8_t current_element;
-	uint8_t address_array[3];
-
-	address_lookup(address_array, address, 0);
-
-	GPIOB->BRR |= 1 << 11;
-
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = 0x02;
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = address_array[0];
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = address_array[1];
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = address_array[2];
-
-	for (i = 0; i < len; i++) {
-		current_element = array[i];
-		while (!(SPI2->SR & SPI_SR_TXE));
-		*(uint8_t *)&SPI2->DR = current_element;
-	}
-
-	while (SPI2->SR & SPI_SR_BSY);
-
-	GPIOB->BSRR |= 1 << 11;
-}
-
-void read_array(uint8_t * array, uint16_t len, uint8_t address) {
-	uint16_t i;
-	uint8_t current_element;
-	uint8_t address_array[3];
-
-	address_lookup(address_array, address, 0);
-
-	GPIOB->BRR |= 1 << 11;
-
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = 0x03;
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = address_array[0];
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = address_array[1];
-	while (!(SPI2->SR & SPI_SR_TXE));
-	*(uint8_t *)&SPI2->DR = address_array[2];
-
-	while (SPI2->SR & SPI_SR_BSY);
-
-	while (SPI2->SR & SPI_SR_FRLVL) current_element = SPI2->DR;
-
-	SPI2->CR1 |= SPI_CR1_RXONLY;
-	for (i = 0; i < len; i++) {
-		while (!(SPI2->SR & SPI_SR_RXNE));
-		current_element = (uint8_t) SPI2->DR;
-		array[i] = current_element;
-	}
-	SPI2->CR1 &= ~SPI_CR1_RXONLY;
-
-	GPIOB->BSRR |= 1 << 11;
-}
-
 // Initiates the process of writing to one channel's RAM memory. DMA settings are reset in a transfer complete interrupt
 void write_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_channel, SPI_TypeDef * spi) {
 	uint8_t address[3];
+	int pin;
 
-	GPIOB->BRR |= 1 << device_lookup(recording_location_and_base_addrs[id]);
+	pin = device_lookup(recording_locations[id]);
 
-	address_lookup(address, recording_location_and_base_addrs[id], recording_offsets[id]);
+	GPIOB->BRR |= 1 << pin;
+
+	address_lookup(address, recording_locations[id], recording_offsets[id]);
 
 	while (spi->SR & SPI_SR_FTLVL);
 	*(uint8_t *)&spi->DR = 0x02;
@@ -214,9 +156,12 @@ void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_chann
 	uint8_t current_element;
 	uint8_t address[3];
 
-	GPIOB->BRR |= 1 << device_lookup(recording_location_and_base_addrs[id]);
+	int pin;
 
-	address_lookup(address, recording_location_and_base_addrs[id], recording_offsets[id]);
+	pin = device_lookup(recording_locations[id]);
+	GPIOB->BRR |= 1 << pin;
+
+	address_lookup(address, recording_locations[id], recording_offsets[id]);
 
 	while (spi->SR & SPI_SR_FTLVL);
 	*(uint8_t *)&spi->DR = 0x03;
@@ -236,13 +181,17 @@ void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_chann
 
 void DMA1_Channel4_5_IRQHandler(void) {
 	uint8_t current_element;
+	uint8_t current_id;
+	int pin;
 
 	while (SPI2->SR & SPI_SR_FTLVL);
-	GPIOB->BSRR |= 1 << 11;
+
 	if (DMA1_Channel4->CCR & DMA_CCR_EN) {
 		// Reception
+		current_id = playback_ids[num_read];
+		pin = device_lookup(recording_locations[current_id]);
+		GPIOB->BSRR |= 1 << pin;
 		num_read++;
-
 		SPI2->CR1 &= ~SPI_CR1_RXONLY;
 		SPI2->CR2 &= ~SPI_CR2_RXDMAEN;
 		while (SPI2->SR & SPI_SR_FRLVL) current_element = SPI2->DR;
@@ -256,11 +205,14 @@ void DMA1_Channel4_5_IRQHandler(void) {
 		}
 
 		// need a current_buf variable
-		uint8_t current_id = playback_ids[num_read];
+		current_id = playback_ids[num_read];
 		read_array_dma(recordings_buf[current_id], current_id, DMA1_Channel4, SPI2);
 
 	} else if (DMA1_Channel5->CCR & DMA_CCR_EN) {
 		// Transmission
+		current_id = recording_ids[num_recordings];
+		pin = device_lookup(recording_locations[current_id]);
+		GPIOB->BSRR |= 1 << pin;
 		DMA1->IFCR |= DMA_IFCR_CTCIF5;
 		SPI2->CR2 &= ~SPI_CR2_TXDMAEN;
 		// Indicates we are done transmitting; do not need to do anything else, that will be handled by our keyboard functionality
@@ -271,21 +223,12 @@ void DMA1_Channel4_5_IRQHandler(void) {
 	}
 }
 
-void record_loc(int chip, int base){
-    if(base >= (MEM_SIZE * 3 / 4)){
-        recording_location_and_base_addrs[chip] = 3;
-    }
-    else if (base >= (MEM_SIZE * 2 / 4)){
-        recording_location_and_base_addrs[chip] = 2;
-    }
-    else if (base >= (MEM_SIZE * 1 / 4)){
-        recording_location_and_base_addrs[chip] = 1;
-    }
-    else{
-        recording_location_and_base_addrs[chip] = 0;
-    }
+void initialize_locations(void) {
+	int i;
 
-    recording_location_and_base_addrs[chip] |= chip << 2;;
+	for (i = 0; i < NUM_CHANNELS; i++) {
+		recording_locations[i] = i;
+	}
 }
 
 

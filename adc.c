@@ -131,7 +131,7 @@ void DMA1_Channel1_IRQHandler() {
     	generate_output();
 
     	current_id = playback_ids[0];
-    	if ()
+//    	if ()
     	read_array_dma(recordings_buf[current_id], current_id, DMA1_Channel4, SPI2);
 
 

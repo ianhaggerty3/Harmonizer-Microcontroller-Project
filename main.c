@@ -15,29 +15,7 @@
 #include "adc.h"
 #include "spi.h"
 
-#define UNIT_TEST
-
 #ifdef UNIT_TEST
-
-void test_array_operation(void) {
-	uint8_t array[] = {255, 1, 2, 3, 4, 5};
-	uint8_t check_array[6];
-	int i;
-
-	write_array(array, 6, 0x01);
-
-	nano_wait(100000);
-
-	read_array(check_array, 6, 0x01);
-
-	for (i = 0; i < 6; i++) {
-		if (array[i] != check_array[i]) {
-			// Set a breakpoint here to check if the arrays are the same
-			nano_wait(100);
-		}
-	}
-	nano_wait(100);
-}
 
 void zero_arr(uint8_t * arr) {
 	int i;
@@ -58,9 +36,6 @@ void test_dma_array_operation(void) {
 		recordings_buf[4][i] = i;
 		recordings_buf[3][i] = i;
 	}
-	recording_location_and_base_addrs[0] = 0x00;
-	recording_location_and_base_addrs[4] = 0x01;
-	recording_location_and_base_addrs[3] = 0x02;
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		recording_offsets[i] = 0;
 	}
@@ -124,6 +99,8 @@ int main(void) {
 
 	init_spi();
 	init_dma();
+
+	initialize_locations();
 
 	// Matt's main
 	setup_timers(9, 1199);
