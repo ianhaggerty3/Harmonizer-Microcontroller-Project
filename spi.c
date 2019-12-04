@@ -233,19 +233,3 @@ void initialize_locations(void) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

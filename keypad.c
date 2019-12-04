@@ -73,8 +73,6 @@ void record_init(){
 }
 
 void record_save(int ch){
-    GPIOA->ODR &= ~(1<<8);
-
     //USE MIC TO RECORD AND STORE INTO SPI
     dmarecord(ch);
 
@@ -107,7 +105,7 @@ void playback(int ch) {
     if (lookup_id(recording_ids, num_recordings, ch) == -1) return; //returns if not already recorded
 
     recording_offsets[ch]= 0;
-    if (lookup_id(playback_ids, num_to_read, ch) == -1) //if audio is currently playing
+    if (lookup_id(playback_ids, num_to_read, ch) > -1) //if audio is currently playing
         return;
 
     //its not currently playing, add to playback queue

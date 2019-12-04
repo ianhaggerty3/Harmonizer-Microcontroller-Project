@@ -51,7 +51,7 @@ void dmaplayback() {
 	DMA1_Channel1->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC);
     DMA1_Channel1->CNDTR = BUF_LEN;
     DMA1_Channel1->CMAR = (uint32_t) output;
-    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR8R1));
+    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR12R1));
     DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
     NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
@@ -71,10 +71,14 @@ void dmarecord(int chan) {
 
 void generate_output(void) {
 	int i;
+	int j;
 
 	for (i = 0; i < BUF_LEN; i++) {
 		// Temporary fix to combining audio channels by just using channel 0.
-		output[i] = recordings_buf[0][i];
+		output[i] = 0;
+		for (j = 0; j < num_to_read; j++) {
+			output[i] += (recordings_buf[playback_ids[j]][i] << 4) / num_to_read;
+		}
 	}
 }
 
@@ -82,10 +86,11 @@ void update_queue(void) {
 	int i;
 
 	for (i = 0; i < num_to_read; i++) {
-		if (recording_offsets[i] >= MEM_SIZE) {
+		if (recording_offsets[i] >= CHANNEL_BYTES) {
 			recording_offsets[i] = 0;
 			playback_ids[i] = playback_ids[num_to_read - 1];
 			num_to_read--;
+			i--;
 		}
 	}
 }
@@ -100,23 +105,31 @@ void DMA1_Channel1_IRQHandler() {
     if (DMA1_Channel1->CCR & DMA_CCR_DIR) {
     	// Playing back audio
     	DMA1_Channel1->CNDTR = BUF_LEN;
+        DMA1_Channel1->CMAR = (uint32_t) output;
     	DMA1_Channel1->CCR |= DMA_CCR_EN;
 
     	// Generate output afterwards to avoid taking too long before writing to the DAC
     	generate_output();
     	update_queue();
 
+    	if (num_to_read == 0) {
+    	    DMA1_Channel1->CCR &= ~DMA_CCR_EN;
+        	DMA1_Channel1->CNDTR = BUF_LEN;
+            DMA1_Channel1->CMAR = (uint32_t) output;
+            return;
+    	}
+
     	current_id = playback_ids[0];
     	read_array_dma(recordings_buf[current_id], current_id, DMA1_Channel4, SPI2);
 
     } else {
     	// Recording audio
-    	current_id;
-    	int a;
-    	a = ADC1->DR;
+        DMA1_Channel1->CMAR = (uint32_t) recordings_buf[currrec];
     	write_array_dma(recordings_buf[currrec], currrec, DMA1_Channel5, SPI2);
 		if (recording_offsets[currrec] >= CHANNEL_BYTES) {
 			// Done recording
+		    GPIOA->ODR &= ~(1<<8);
+			recording_offsets[currrec] = 0;
 			recording_ids[num_recordings] = currrec;
 			num_recordings++;
 			return;
@@ -125,4 +138,3 @@ void DMA1_Channel1_IRQHandler() {
 		DMA1_Channel1->CCR |= DMA_CCR_EN;
     }
 }
-

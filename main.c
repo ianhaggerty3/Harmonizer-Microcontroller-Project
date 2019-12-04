@@ -104,7 +104,7 @@ int main(void) {
 
 	// Matt's main
 	setup_gpio_adc();
-	setup_timers(9, 1199);
+	setup_timers(4, 1199);
 	setup_adc();
 	setup_dac();
 	// end of Matt's main
