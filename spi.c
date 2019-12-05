@@ -30,20 +30,20 @@ int lookup_id(uint8_t * arr, int len, int id) {
 
 uint8_t device_lookup(uint8_t base) {
 	// Yet to be implemented; may want to return a pointer to GPIOA or something
-    //Returns either 11, 12, 8, or 9
-   uint8_t output;
-   if(((base >> 2) & 0x3) == 0){
-       output = 8;
-   }
-   else if (((base >> 2) & 0x3) == 1){
-       output = 9;
-   }
-   else if (((base >> 2) & 0x3) == 2){
-       output = 11;
-   }
-   else{
-       output = 12;
-   }
+	//Returns either 11, 12, 8, or 9
+	uint8_t output;
+	if(((base >> 2) & 0x3) == 0){
+		output = 8;
+	}
+	else if (((base >> 2) & 0x3) == 1){
+		output = 9;
+	}
+	else if (((base >> 2) & 0x3) == 2){
+		output = 11;
+	}
+	else {
+		output = 12;
+	}
 	return output;
 }
 
@@ -107,8 +107,8 @@ void init_spi(void) {
 	SPI2->CR1 |= SPI_CR1_MSTR;
 
 	// Set clock divisor for baud rate as 4 (by setting bit 0), the highest the 23LC1024 can handle
-	SPI2->CR1 |= SPI_CR1_BR_0;
-//	SPI2->CR1 |= SPI_CR1_BR_2;
+//	SPI2->CR1 |= SPI_CR1_BR_0;
+	SPI2->CR1 |= SPI_CR1_BR_2;
 
 	SPI2->CR2 |= SPI_CR2_FRXTH;
 
@@ -157,7 +157,6 @@ void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_chann
 	uint8_t address[3];
 
 	int pin;
-
 	pin = device_lookup(recording_locations[id]);
 	GPIOB->BRR |= 1 << pin;
 
@@ -169,7 +168,7 @@ void read_array_dma(uint8_t * array, uint8_t id, DMA_Channel_TypeDef * dma_chann
 	*(uint8_t *)&spi->DR = address[1];
 	*(uint8_t *)&spi->DR = address[2];
 
-	while (spi->SR & SPI_SR_BSY);
+	while (spi->SR & SPI_SR_FTLVL);
 	while (spi->SR & SPI_SR_FRLVL) current_element = spi->DR;
 
 	dma_channel->CMAR = array;
@@ -189,20 +188,22 @@ void DMA1_Channel4_5_IRQHandler(void) {
 	if (DMA1_Channel4->CCR & DMA_CCR_EN) {
 		// Reception
 		current_id = playback_ids[num_read];
+		recording_offsets[current_id] += BUF_LEN;
+
 		pin = device_lookup(recording_locations[current_id]);
 		GPIOB->BSRR |= 1 << pin;
+
 		num_read++;
+
 		SPI2->CR1 &= ~SPI_CR1_RXONLY;
 		SPI2->CR2 &= ~SPI_CR2_RXDMAEN;
 		while (SPI2->SR & SPI_SR_FRLVL) current_element = SPI2->DR;
-
 		DMA1->IFCR |= DMA_IFCR_CTCIF4;
 		DMA1_Channel4->CCR &= ~DMA_CCR_EN;
 
-		recording_offsets[current_id] += BUF_LEN;
-
 		if (num_read >= num_to_read) {
 			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
+			queues_read++;
 			return;
 		}
 

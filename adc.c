@@ -80,16 +80,18 @@ void generate_output(void) {
 //		for (j = 0; j < num_to_read; j++) {
 //			output[i] += (recordings_buf[playback_ids[j]][i] << 4) / num_to_read;
 //		}
-		output[i] = recordings_buf[0][i];
+		output[i] = recordings_buf[4][i];
 	}
 }
 
 void update_queue(void) {
 	int i;
+	int current_id;
 
 	for (i = 0; i < num_to_read; i++) {
-		if (recording_offsets[i] >= CHANNEL_BYTES) {
-			recording_offsets[i] = 0;
+		current_id = playback_ids[i];
+		if (recording_offsets[current_id] >= CHANNEL_BYTES) {
+			recording_offsets[current_id] = 0;
 			playback_ids[i] = playback_ids[num_to_read - 1];
 			num_to_read--;
 			i--;
@@ -106,6 +108,10 @@ void DMA1_Channel1_IRQHandler() {
 
     if (DMA1_Channel1->CCR & DMA_CCR_DIR) {
     	// Playing back audio
+    	if (buffers_transmitted != queues_read) {
+    		nano_wait(1);
+    	}
+
     	DMA1_Channel1->CNDTR = BUF_LEN;
         DMA1_Channel1->CMAR = (uint32_t) output;
     	DMA1_Channel1->CCR |= DMA_CCR_EN;
@@ -115,11 +121,11 @@ void DMA1_Channel1_IRQHandler() {
     	update_queue();
 
     	num_read = 0;
+    	buffers_transmitted++;
 
     	if (num_to_read == 0) {
     	    DMA1_Channel1->CCR &= ~DMA_CCR_EN;
         	DMA1_Channel1->CNDTR = BUF_LEN;
-            DMA1_Channel1->CMAR = (uint32_t) output;
             return;
     	}
 

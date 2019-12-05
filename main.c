@@ -13,7 +13,10 @@
 #include "stm32f0_discovery.h"
 
 #include "adc.h"
+#include "keypad.h"
 #include "spi.h"
+
+//#define UNIT_TEST
 
 #ifdef UNIT_TEST
 
@@ -42,11 +45,19 @@ void test_dma_array_operation(void) {
 
 	num_recordings = 0;
 	write_array_dma(recordings_buf[0], 0, DMA1_Channel5, SPI2);
-	while (num_recordings == 0);
+	while (recording_offsets[0] != 128);
+
+	num_recordings = 1;
 	write_array_dma(recordings_buf[4], 4, DMA1_Channel5, SPI2);
-	while (num_recordings == 1);
+	while (recording_offsets[4] != 128);
+
+	num_recordings = 2;
 	write_array_dma(recordings_buf[3], 3, DMA1_Channel5, SPI2);
-	while (num_recordings == 2);
+	while (recording_offsets[3] != 128);
+
+	recording_offsets[0] = 0;
+	recording_offsets[4] = 0;
+	recording_offsets[3] = 0;
 
 	zero_arr(recordings_buf[0]);
 	zero_arr(recordings_buf[4]);
@@ -101,6 +112,9 @@ int main(void) {
 	init_spi();
 	init_dma();
 
+	queues_read = 0;
+	buffers_transmitted = 0;
+
 	initialize_locations();
 
 	// Matt's main
@@ -118,6 +132,10 @@ int main(void) {
 
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		recording_offsets[i] = 0;
+	}
+
+	for (i = 0; i < BUF_LEN; i++) {
+		output[i] = 0;
 	}
 
 #ifdef UNIT_TEST

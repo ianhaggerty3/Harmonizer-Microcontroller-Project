@@ -74,6 +74,7 @@ void record_init(){
 
 void record_save(int ch){
     //USE MIC TO RECORD AND STORE INTO SPI
+	recording_ids[num_recordings] = ch;
     dmarecord(ch);
 
 //    pulse_led(1);
@@ -256,8 +257,9 @@ void TIM6_DAC_IRQHandler() { //tiggers every 1ms to scan keypad
     history[index+1] |= ((row>>1) & 0x1);
     history[index+2] |= ((row>>2) & 0x1);
     history[index+3] |= ((row>>3) & 0x1);
+    GPIOB->BRR |= (1<<col);
     col++;
     if (col>3)
         col=0;
-    GPIOB->ODR = (1<<col);
+    GPIOB->BSRR |= (1<<col);
 }
