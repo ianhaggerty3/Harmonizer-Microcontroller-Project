@@ -203,7 +203,6 @@ void DMA1_Channel4_5_IRQHandler(void) {
 
 		if (num_read >= num_to_read) {
 			// This would be where we could make a combined values array if we wanted; we have all of the necessary parts for it
-			queues_read++;
 			return;
 		}
 

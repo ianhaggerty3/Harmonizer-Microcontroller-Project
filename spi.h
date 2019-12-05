@@ -8,9 +8,6 @@
 #define BUF_COUNT (CHANNEL_BYTES / BUF_LEN)
 #define NUM_CHANNELS 12
 
-uint16_t buffers_transmitted;
-uint16_t queues_read;
-
 uint8_t recordings_buf[NUM_CHANNELS][BUF_LEN];
 uint8_t output[BUF_LEN];
 uint8_t recording_ids[NUM_CHANNELS];

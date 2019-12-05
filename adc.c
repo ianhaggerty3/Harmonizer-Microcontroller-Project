@@ -72,15 +72,17 @@ void dmarecord(int chan) {
 
 void generate_output(void) {
 	int i;
-//	int j;
+	int j;
+	int current_id;
 
 	for (i = 0; i < BUF_LEN; i++) {
 		// Temporary fix to combining audio channels by just using channel 0.
-//		output[i] = 0;
-//		for (j = 0; j < num_to_read; j++) {
+		output[i] = 0;
+		for (j = 0; j < num_to_read; j++) {
 //			output[i] += (recordings_buf[playback_ids[j]][i] << 4) / num_to_read;
-//		}
-		output[i] = recordings_buf[4][i];
+			current_id = playback_ids[j];
+			output[i] += recordings_buf[current_id][i];
+		}
 	}
 }
 
@@ -108,9 +110,6 @@ void DMA1_Channel1_IRQHandler() {
 
     if (DMA1_Channel1->CCR & DMA_CCR_DIR) {
     	// Playing back audio
-    	if (buffers_transmitted != queues_read) {
-    		nano_wait(1);
-    	}
 
     	DMA1_Channel1->CNDTR = BUF_LEN;
         DMA1_Channel1->CMAR = (uint32_t) output;
@@ -121,7 +120,6 @@ void DMA1_Channel1_IRQHandler() {
     	update_queue();
 
     	num_read = 0;
-    	buffers_transmitted++;
 
     	if (num_to_read == 0) {
     	    DMA1_Channel1->CCR &= ~DMA_CCR_EN;

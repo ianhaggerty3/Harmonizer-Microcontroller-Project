@@ -112,9 +112,6 @@ int main(void) {
 	init_spi();
 	init_dma();
 
-	queues_read = 0;
-	buffers_transmitted = 0;
-
 	initialize_locations();
 
 	// Matt's main
