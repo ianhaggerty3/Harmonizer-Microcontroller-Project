@@ -8,6 +8,7 @@
 #include "adc.h"
 
 int record=0;
+int continuous=0;
 int record_ch=0;
 
 int delete=0;
@@ -30,6 +31,11 @@ void keypad_driver() {
             record_init(); // sets record = 1
         }
 
+        if (key == '0') {
+        	reset_state();
+        	continuous_init();
+        }
+
 		if (key == 'D') {
 			reset_state();
 			delete_init(); // sets delete = 1
@@ -38,10 +44,6 @@ void keypad_driver() {
 		if (key == '#') {
 			reset_state();
 			go_crazy();
-		}
-
-		if (key == '0') {
-			// continuous mode
 		}
 
         if (channel >= 0 && record == 0 && delete == 0) {
@@ -54,7 +56,13 @@ void keypad_driver() {
         	record_save(channel);
         }
 
+        if (channel >= 0 && continuous == 1) {
+        	reset_state();
+        	set_continuous(channel);
+        }
+
         if (channel >= 0 && delete == 1) {
+        	reset_state();
             delete_select_ch(channel);
         }
     }
@@ -63,6 +71,8 @@ void keypad_driver() {
 void reset_state(void) {
 	record = 0;
 	delete = 0;
+	continuous = 0;
+	GPIOA->ODR &= ~1<<8;
 }
 
 /////////////////////////////RECORD START//////////////////
@@ -81,6 +91,15 @@ void record_save(int ch){
 //    GPIOA->ODR &= ~(1<<8);
 }
 /////////////////////////////RECORD END//////////////////
+
+void continuous_init(void) {
+	GPIOA->ODR |= 1<<8;
+	continuous=1;
+}
+
+void set_continuous(int ch) {
+	recording_locations[ch] |= 1 << 4;
+}
 
 int get_channel(char ch) {
     int ret_val = -1;
@@ -138,6 +157,8 @@ void delete_select_ch(int ch){
 
 	num_to_read--;
 	playback_ids[index] = playback_ids[num_to_read];
+
+	recording_locations[ch] &= ~(1 << 4);
 }
 /////////////////////////////DELETE END//////////////
 
@@ -231,7 +252,7 @@ void setup_keypad() {
     GPIOB->PUPDR &= ~(0xf<<(2*6)); //clear all
     GPIOB->PUPDR |= 2<<(2*6); //set
 
-    GPIOB->MODER &= ~(0xf<<(2*7)); //clear all
+    GPIOB->MODER &= ~(0x3<<(2*7)); //clear all
     GPIOB->PUPDR &= ~(0xf<<(2*7)); //clear all
     GPIOB->PUPDR |= 2<<(2*7); //set
 }

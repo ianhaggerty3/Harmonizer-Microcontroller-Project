@@ -86,6 +86,10 @@ void generate_output(void) {
 	}
 }
 
+int get_continuous(int ch) {
+	return (recording_locations[ch] >> 4) & 0x1;
+}
+
 void update_queue(void) {
 	int i;
 	int current_id;
@@ -94,6 +98,9 @@ void update_queue(void) {
 		current_id = playback_ids[i];
 		if (recording_offsets[current_id] >= CHANNEL_BYTES) {
 			recording_offsets[current_id] = 0;
+			if (get_continuous(current_id)) {
+				continue;
+			}
 			playback_ids[i] = playback_ids[num_to_read - 1];
 			num_to_read--;
 			i--;

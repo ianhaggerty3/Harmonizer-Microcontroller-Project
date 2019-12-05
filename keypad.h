@@ -14,6 +14,9 @@ void reset_state(void);
 void record_init(void);
 void record_save(int);
 
+void continuous_init(void);
+void set_continuous(int);
+
 void playback(int);
 void go_crazy(void);
 

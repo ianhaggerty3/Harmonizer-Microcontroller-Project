@@ -32,7 +32,7 @@ uint8_t device_lookup(uint8_t base) {
 	// Yet to be implemented; may want to return a pointer to GPIOA or something
 	//Returns either 11, 12, 8, or 9
 	uint8_t output;
-	if(((base >> 2) & 0x3) == 0){
+	if (((base >> 2) & 0x3) == 0){
 		output = 8;
 	}
 	else if (((base >> 2) & 0x3) == 1){
@@ -60,7 +60,6 @@ void address_lookup(uint8_t * address_array, uint8_t base, uint16_t offset) {
 
 void init_dma(void) {
 	RCC->AHBENR |= RCC_AHBENR_DMA1EN;
-
 
 	// Channel 1 is for the ADC based on the FRM
 
@@ -93,6 +92,7 @@ void init_spi(void) {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
 
 	// Manual SS for memory chips output
+	GPIOB->MODER &= ~(0x3 << (2 * 8));
 	GPIOB->MODER |= (1 << (2 * 8));
 	GPIOB->MODER |= (1 << (2 * 9));
 	GPIOB->MODER |= (1 << (2 * 11));
