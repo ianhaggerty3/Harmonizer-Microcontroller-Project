@@ -44,15 +44,15 @@ void setup_dac() {
     DAC->CR |= DAC_CR_EN1 | DAC_CR_DMAEN1;
 }
 
-void dmaplayback() {
+void dma_playback() {
     RCC->AHBENR |= RCC_AHBENR_DMA1EN;
     DMA1_Channel1->CCR &= ~(DMA_CCR_MSIZE | DMA_CCR_PSIZE | DMA_CCR_PINC);
-//    DMA1_Channel1->CCR |= (DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_DIR | DMA_CCR_MINC);
-	DMA1_Channel1->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC);
+    DMA1_Channel1->CCR |= (DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 | DMA_CCR_DIR | DMA_CCR_MINC);
+//	DMA1_Channel1->CCR |= (DMA_CCR_DIR | DMA_CCR_MINC);
     DMA1_Channel1->CNDTR = BUF_LEN;
     DMA1_Channel1->CMAR = (uint32_t) output;
-//    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR12R1));
-    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR8R1));
+    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR12R1));
+//    DMA1_Channel1->CPAR = (uint32_t) (&(DAC->DHR8R1));
     DMA1_Channel1->CCR |= DMA_CCR_EN | DMA_CCR_TCIE;
     NVIC->ISER[0] |= 1<<DMA1_Channel1_IRQn;
 }
@@ -75,15 +75,16 @@ void generate_output(void) {
 	int j;
 	int current_id;
 
-	for (i = 0; i < BUF_LEN; i++) {
+	for (i = 1; i < BUF_LEN; i++) {
 		// Temporary fix to combining audio channels by just using channel 0.
 		output[i] = 0;
 		for (j = 0; j < num_to_read; j++) {
-//			output[i] += (recordings_buf[playback_ids[j]][i] << 4) / num_to_read;
 			current_id = playback_ids[j];
-			output[i] += recordings_buf[current_id][i];
+			output[i] += (recordings_buf[current_id][i] << 4) / num_to_read;
+//			output[i] += recordings_buf[current_id][i];
 		}
 	}
+	output[0] = output[1];
 }
 
 int get_continuous(int ch) {

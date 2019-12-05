@@ -53,6 +53,7 @@ void keypad_driver() {
         if (channel >= 0 && record == 1) {
         	// record the selected channel
             reset_state();
+            GPIOA->ODR |= 1<<8;
         	record_save(channel);
         }
 
@@ -132,7 +133,7 @@ void playback(int ch) {
     playback_ids[num_to_read] = ch;
     num_to_read++;
 
-    dmaplayback();
+    dma_playback();
 }
 /////////////////////////////PLAYBACK END//////////////
 
@@ -171,6 +172,7 @@ void go_crazy(void) {
 		playback_ids[i] = recording_ids[i];
 	}
 	num_to_read = num_recordings;
+	dma_playback();
 }
 
 /////////////////////////////CRAZY END//////////////
